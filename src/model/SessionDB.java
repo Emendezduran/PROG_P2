@@ -83,7 +83,7 @@ public final class SessionDB {
                     System.out.println("Connection to " + conn.getMetaData().getDriverName() + " has been established.");
                 }
             } else {
-                if (MainFrame.SQL_CONN && autoclose) {
+                if (MainFrame.SQL_CONN) {
                     System.out.println("Connection to " + conn.getMetaData().getDriverName() + " already active.");
                 }
             }
@@ -110,16 +110,42 @@ public final class SessionDB {
                         System.out.println("Connection was already closed.");
                     }
                 }
+            } else {
+                System.out.println("Keeping conection alive.");
             }
         } catch (SQLException ex) {
             System.out.println(ex.getMessage());
         }
     }
 
+    /**
+     * este metodo es para consultas en secuencia, al ejecutarlo
+     * [setAutoclose(false)] se conecta a la DB y despues de todos los accesos a
+     * la BD debe ser llamado nuevamente para asegurar la desconexion.
+     *
+     * Ejemplo SessionDB.setAutoclose(false);
+     *
+     * CategoriaDao.getInstance().queryAll();
+     * ProductoDao.getInstance().queryAll(); categorizarProductos();
+     * ArrayList<Orden> ordenesActivas =
+     * MesaDao.getInstance().getOrdenesActivas();
+     * ServidoDao.getInstance().query(ordenesActivas);
+     * MesaDao.getInstance().queryAll();
+     *
+     * SessionDB.setAutoclose(true);
+     *
+     * @param autoclose
+     */
     public static void setAutoclose(boolean autoclose) {
-        SessionDB.autoclose = autoclose;
         if (autoclose) {
+            SessionDB.autoclose = autoclose;
             close();
+        } else {
+            connect();
+            SessionDB.autoclose = autoclose;
+        }
+        if (MainFrame.SQL_CONN) {
+            System.out.println("Autoclose? " + autoclose);
         }
     }
 
@@ -190,14 +216,14 @@ public final class SessionDB {
             String multicmd = sqlcmd.toString();
             String[] cmds = multicmd.split(";");
             SessionDB.connect();
-            for (String cmd : cmds) {
+            for (String sql : cmds) {
                 try (Statement stmt = SessionDB.getConn().createStatement()) {
-                    rows += stmt.executeUpdate(cmd.trim());
+                    rows += stmt.executeUpdate(sql.trim());
                     if (MainFrame.SQL_DEBUG) {
-                        System.out.println(cmd);
+                        System.out.println(sql);
                     }
                 } catch (SQLException ex) {
-                    Logger.getLogger(SessionDB.class.getName()).log(Level.SEVERE, cmd, ex);
+                    Logger.getLogger(SessionDB.class.getName()).log(Level.SEVERE, sql, ex);
                 }
             }
         } catch (FileNotFoundException ignored) {
@@ -218,14 +244,14 @@ public final class SessionDB {
             String multicmd = sqlcmd.toString();
             String[] cmds = multicmd.split(";");
             SessionDB.connect();
-            for (String cmd : cmds) {
+            for (String sql : cmds) {
                 try (Statement stmt = SessionDB.getConn().createStatement()) {
-                    stmt.executeUpdate(cmd.trim());
+                    stmt.executeUpdate(sql.trim());
                     if (MainFrame.SQL_DEBUG) {
-                        System.out.println(cmd);
+                        System.out.println(sql);
                     }
                 } catch (SQLException ex) {
-                    Logger.getLogger(SessionDB.class.getName()).log(Level.SEVERE, cmd, ex);
+                    Logger.getLogger(SessionDB.class.getName()).log(Level.SEVERE, sql, ex);
                 }
             }
         } catch (FileNotFoundException ignored) {
